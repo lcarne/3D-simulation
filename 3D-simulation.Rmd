@@ -1,0 +1,304 @@
+---
+title: "3D-simulation"
+author: "LC-OK-SV"
+date: "04/02/2020"
+output: html_document
+---
+
+# {.tabset}
+
+```{r setup, message = FALSE, warning = FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE) #set echo = FALSE for every chunk
+knitr::opts_chunk$set(fig.width = 10) 
+
+list.of.packages <- c("BBmisc", "class", "rgl", "dplyr", "network", "knitr")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(BBmisc)
+library(class)
+library(rgl)
+library(dplyr)
+library(network)
+library(knitr)
+
+knit_hooks$set(webgl = hook_webgl)
+```
+
+
+## Knn - Simulation
+
+### Step 1 - Creation of the data set for the simulation
+
+```{r step1, message = TRUE, echo = TRUE}
+set.seed(250)
+dataA <- cbind(Label = "A", x = rnorm(100, 20, 5), y = rnorm(100, 18.5, 4.5), z = rnorm(100, 19.5, 6))
+dataA <- as.data.frame(dataA, stringsAsFactors = FALSE)
+dataA <- dataA %>% mutate(Label = as.factor(Label), x = as.double(x), y = as.double(y), z = as.double(z))
+
+set.seed(200)
+dataB <- cbind(Label = "B", x = rnorm(100, 85, 5), y = rnorm(100, 40, 4.5), z = rnorm(100, 45, 6))
+dataB <- as.data.frame(dataB, stringsAsFactors = FALSE)
+dataB <- dataB %>% mutate(Label = as.factor(Label), x = as.double(x), y = as.double(y), z = as.double(z))
+
+set.seed(200)
+dataC <- cbind(Label= "C", x = rnorm(100, 35, 8), y = rnorm(100, 80, 7), z = rnorm(100, 75, 6))
+dataC <- as.data.frame(dataC, stringsAsFactors = FALSE)
+dataC <- dataC %>% mutate(Label = as.factor(Label), x = as.double(x), y = as.double(y), z = as.double(z))
+               
+data <- rbind(dataA, dataB, dataC)
+
+head(data)
+```
+
+### Step 2 - 3D plot
+
+```{r step2, webgl = TRUE, echo = TRUE}
+
+x = data$x
+y = data$y
+z = data$z
+
+plot3d(x, y, z, col = as.color(data$Label))
+
+ellipsA <- ellipse3d(cov(cbind(dataA$x, dataA$y, dataA$z)), centre = c(mean(dataA$x), mean(dataA$y), mean(dataA$z)))
+plot3d(ellipsA, col = "black", alpha = 0.5, add = TRUE, type = "wire")
+
+ellipsB <- ellipse3d(cov(cbind(dataB$x, dataB$y, dataB$z)), centre = c(mean(dataB$x), mean(dataB$y), mean(dataB$z)))
+plot3d(ellipsB, col = "red", alpha = 0.5, add = TRUE, type = "wire")
+
+ellipsC <- ellipse3d(cov(cbind(dataC$x, dataC$y, dataC$z)), centre = c(mean(dataC$x), mean(dataC$y), mean(dataC$z)))
+plot3d(ellipsC, col = "green", alpha = 0.5, add = TRUE, type = "wire")
+
+train <- data[2:4]
+test <- cbind(x = 50, y = 50, z = 50)
+cl <- data$Label
+
+knn(train, test, cl, k = 15, prob=TRUE)
+```
+
+This new value should probably be in the B group
+
+### Step 3 - Knn
+
+```{r step3, echo = TRUE}
+## 75% of the sample size
+smp_size <- floor(0.75 * nrow(data))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(data)), size = smp_size)
+
+train <- data[train_ind, ]
+test <- data[-train_ind, ]
+
+
+
+knn(train[,-1], test[,-1], train[,1], k = 15, prob = TRUE, use.all = TRUE)
+
+result <- as.data.frame(knn(train[,-1], test[,-1], train[,1], k = 15, prob = TRUE, use.all = TRUE))
+test$Label <- as.character(test$Label)
+sum(result[1] == test$Label)/nrow(test)*100
+```
+
+The classification is 100 percent correct
+
+### Step 4 - New parameters
+
+```{r step4, webgl = TRUE, echo = TRUE}
+set.seed(250)
+dataA <- cbind(Label = "A", x = rnorm(100, 30, 7), y = rnorm(100, 30, 7), z = rnorm(100, 30, 7))
+dataA <- as.data.frame(dataA, stringsAsFactors = FALSE)
+dataA <- dataA %>% mutate(Label = as.factor(Label), x = as.double(x), y = as.double(y), z = as.double(z))
+
+set.seed(200)
+dataB <- cbind(Label = "B", x = rnorm(100, 30, 7), y = rnorm(100, 30, 7), z = rnorm(100, 30, 7))
+dataB <- as.data.frame(dataB, stringsAsFactors = FALSE)
+dataB <- dataB %>% mutate(Label = as.factor(Label), x = as.double(x), y = as.double(y), z = as.double(z))
+
+set.seed(200)
+dataC <- cbind(Label= "C", x = rnorm(100, 55, 8), y = rnorm(100, 55, 7), z = rnorm(100, 55, 6))
+dataC <- as.data.frame(dataC, stringsAsFactors = FALSE)
+dataC <- dataC %>% mutate(Label = as.factor(Label), x = as.double(x), y = as.double(y), z = as.double(z))
+               
+data <- rbind(dataA, dataB, dataC)
+
+#3dplot
+x = data$x
+y = data$y
+z = data$z
+
+plot3d(x, y, z, col = as.color(data$Label))
+
+ellipsA <- ellipse3d(cov(cbind(dataA$x, dataA$y, dataA$z)), centre = c(mean(dataA$x), mean(dataA$y), mean(dataA$z)))
+plot3d(ellipsA, col = "black", alpha = 0.5, add = TRUE, type = "wire")
+
+ellipsB <- ellipse3d(cov(cbind(dataB$x, dataB$y, dataB$z)), centre = c(mean(dataB$x), mean(dataB$y), mean(dataB$z)))
+plot3d(ellipsB, col = "red", alpha = 0.5, add = TRUE, type = "wire")
+
+ellipsC <- ellipse3d(cov(cbind(dataC$x, dataC$y, dataC$z)), centre = c(mean(dataC$x), mean(dataC$y), mean(dataC$z)))
+plot3d(ellipsC, col = "green", alpha = 0.5, add = TRUE, type = "wire")
+
+#knn
+## 75% of the sample size
+smp_size <- floor(0.75 * nrow(data))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(data)), size = smp_size)
+
+train <- data[train_ind, ]
+test <- data[-train_ind, ]
+
+
+
+knn(train[,-1], test[,-1], train[,1], k = 15, prob = TRUE, use.all = TRUE)
+
+result <- as.data.frame(knn(train[,-1], test[,-1], train[,1], k = 15, prob = TRUE, use.all = TRUE))
+test$Label <- as.character(test$Label)
+sum(result[1] == test$Label)/nrow(test)*100
+```
+
+63 percent of the classification is now correct
+
+## WBC
+
+### 1. Import the dataset from “wisc_bc_data.csv”
+
+```{R 1, echo = TRUE}
+data <- read.csv(file = "./data/wisc_bc_data.csv")
+```
+
+### 2. Display the dimensions, and summary of the dataset
+
+Dimension : 569 rows, 32 columns
+```{R 2dim}
+dim(data)
+```
+
+Summary :
+```{R 2str}
+str(data)
+```
+
+### 3. What is the number of benign and malignant records?
+
+```{R 3}
+table(data$diagnosis)
+```
+
+### 4. Convert the diagnosis variable to a factor with levels being B and M and Labels “Benign” and “Malignat”
+
+```{R 4, echo = TRUE}
+data$diagnosis <- factor(data$diagnosis, levels = c("B", "M"), labels = c("Benign", "Malignat"))
+```
+
+### 5. Express this result in %
+
+Percentage of Benign
+```{R 5benign}
+(nrow(data %>% filter(diagnosis == "Benign"))/nrow(data))*100
+```
+
+Percentage of Malignat
+```{R 5malignat}
+(nrow(data %>% filter(diagnosis == "Malignat"))/nrow(data))*100
+```
+
+### 6. Remove the id colon from the dataset
+
+```{R 6, echo = TRUE}
+data <- data[,-1]
+```
+
+### 7. Create a minmaxfunction using the following formula x-min(x)) / (max(x)-min(x)
+
+```{R 7, echo = TRUE}
+minmaxnorm <- function(x) {
+  return( (x - min(x)) / (max(x) - min(x)))
+}
+```
+
+### 8. Test the function with: minmaxnorm(c(1,2,3,4,5)) minmaxnorm(seq(from=10, to=50, by = 10) )
+
+```{R 8, echo = TRUE}
+minmaxnorm(c(1, 2, 3, 4, 5))
+minmaxnorm(seq(from = 10, to = 50, by = 10))
+```
+
+### 9. Load the BBmisc package and test the normalize function on the same vectors (you can use the identical function to confirm your result)
+
+```{R 9, echo = TRUE}
+normalize(c(1, 2, 3, 4, 5), method = "range")
+normalize(seq(from = 10, to = 50, by = 10), method = "range")
+```
+
+### 10. Why can it be important to normalize variables before using the knn algorithm? Provide an example.
+
+It is important to normalize variables before using the Knn algorith because what matters is the distance defined between points. 
+Without normalization the points alignment would lead to an incorrect classification. 
+For example, if you have a dataset with x features, and all but one feature dimension have values between 0 and 1, BUT a single feature dimension have value between -10 000 and 10 000. If you do not normalized it would create an error by making the algorithm rely on the larger values dimension.
+
+### 11. Normalize all the variables
+
+```{R 11, echo = TRUE}
+data[,2:31] <- normalize(data[-1], method = "range")
+```
+
+### 12. Split the dataset into a train data set (469 first) and test dataset (100 last).
+
+```{R 12, echo = TRUE}
+train <- data[1:469, ]
+test <- data[470:569, ]
+```
+
+### 13. Using knn with k=3, try to predict the diagnosis of the test dataset
+
+```{R 13, echo = TRUE}
+knn(train[,-1], test[,-1], train[,1], k = 3, prob = TRUE)
+```
+
+
+### 14. What is the percentage of correct diagnosis
+
+```{R 14, echo = TRUE}
+result <- as.data.frame(knn(train[,-1], test[,-1], train[,1], k = 3, prob = TRUE)[1:100])
+sum(test[1] == result)/nrow(result)*100
+```
+
+### 15. What is the percentage of predicted benign when indeed benign?
+
+```{R 15, echo = TRUE}
+result <- cbind(test[1], result)
+colnames(result) <- c("initial", "result")
+nrow(result %>% filter(initial == "Benign" & result == "Benign")) / nrow(result %>% filter(initial == "Benign")) * 100
+```
+
+### 16. What is the percentage of predicted malign when indeed malign?
+
+```{R 16, echo = TRUE}
+nrow(result %>% filter(initial == "Malignat" & result == "Malignat")) / nrow(result %>% filter(initial == "Malignat")) * 100
+```
+
+### 17. What is the percentage of predicted benign when in fact malign?
+
+```{R 17, echo = TRUE}
+nrow(result %>% filter(initial == "Malignat" & result == "Benign")) / nrow(result %>% filter(initial == "Malignat")) * 100
+```
+
+### 18. What is the percentage of predicted malign when in fact benign?
+
+```{R 18, echo = TRUE}
+nrow(result %>% filter(initial == "Benign" & result == "Malignat")) / nrow(result %>% filter(initial == "Benign")) * 100
+```
+
+
+
+
+
+
+
+
+
+
+
